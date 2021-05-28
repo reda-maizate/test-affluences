@@ -23,19 +23,31 @@ class DetectMissingData():
         """
         Constructor of the class.
         """
+        self.sensor_data = sensor_data
+        self.timetables = timetables
         self.analyze_date = analyze_date
         self.last_record_column_name = last_record_column_name
         self.opening_column_name = opening_column_name
         self.closing_column_name = closing_column_name
 
-        sensor_df, tt_df = self.import_data(sensor_data, timetables)
+    def detect(self):
+        """
+        Apply all the functions to detect the missing data.
+
+        Arguments:
+        None
+
+        Returns:
+        None
+        """
+        sensor_df, tt_df = self.import_data()
         merged_df = self.merge_data(sensor_df, tt_df)
         converted_df = self.convert_to_datetime(merged_df)
         diff_df = self.inactivity_by_hours(converted_df)
         alerts_df = self.apply_filter(diff_df)
-        self.printAlerts(alerts_df)
+        d.printAlerts(alerts_df)
 
-    def import_data(self, sensor_data, timetables):
+    def import_data(self):
         """
         Import the dataset containing the sensor and logs informations.
 
@@ -47,7 +59,14 @@ class DetectMissingData():
         sensor_data -- DataFrame containing the sensor data.
         timetables -- DataFrame containing the logs data.
         """
-        return pd.read_csv(sensor_data), pd.read_csv(timetables)
+        try:
+            return pd.read_csv(self.sensor_data), pd.read_csv(self.timetables)
+        except FileNotFoundError:
+            print("File(s) not found!")
+            raise
+        except ValueError:
+            print("Type of path not supported!")
+            raise
 
     def merge_data(self, sensor_df, tt_df):
         """
@@ -63,6 +82,7 @@ class DetectMissingData():
         sensor_df_ = sensor_df.set_index("site_id")
         tt_df_ = tt_df.set_index("site_id")
         return tt_df_.merge(sensor_df_, left_index=True, right_index=True)
+
 
     def convert_to_datetime(self, df):
         """
@@ -132,4 +152,5 @@ class DetectMissingData():
         df.apply((lambda r: print(f"Sensor {r['sensor_name']} with identifier {r['sensor_identifier']} triggers an alert at {r['datetime_now']} with level {r['level']} with last data recorded at {r['last_record_datetime']}\n")), axis=1)
 
 if __name__ == "__main__":
-    DetectMissingData("data/data.csv", "data/timetables.csv")
+    d = DetectMissingData("data/data.csv", "data/timetables.csv")
+    d.detect()
